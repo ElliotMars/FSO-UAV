@@ -38,9 +38,9 @@ from pathlib import Path
 
 import torch
 
-FILE = Path(__file__).resolve()
+FILE = Path(__file__).resolve() #该detect.py文件的绝对路径
 ROOT = FILE.parents[0]  # YOLOv5 root directory
-if str(ROOT) not in sys.path:
+if str(ROOT) not in sys.path: #模块的查询路径的列表
     sys.path.append(str(ROOT))  # add ROOT to PATH
 ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
 
@@ -105,7 +105,7 @@ def run(
     # Dataloader
     bs = 1  # batch_size
     if webcam:
-        view_img = check_imshow(warn=True)
+        view_img = cheeck_imshow(warn=True)
         dataset = LoadStreams(source, img_size=imgsz, stride=stride, auto=pt, vid_stride=vid_stride)
         bs = len(dataset)
     elif screenshot:
