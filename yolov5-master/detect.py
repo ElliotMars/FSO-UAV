@@ -118,6 +118,7 @@ def run(
     model.warmup(imgsz=(1 if pt or model.triton else bs, 3, *imgsz))  # warmup
     seen, windows, dt = 0, [], (Profile(), Profile(), Profile())
     for path, im, im0s, vid_cap, s in dataset:
+        starttime = time.time()
         with dt[0]:
             im = torch.from_numpy(im).to(model.device)
             im = im.half() if model.fp16 else im.float()  # uint8 to fp16/32
@@ -190,6 +191,13 @@ def run(
                     time.sleep(0.1)
                     # print('class index is',class_index.item())#打印属性，由于我们只有一个类，所以是0
                     # print('object_names is',object_name)#打印标签名字，
+                    cv2.putText(im0, str(point), (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+
+            # 计算fps
+            endtime = time.time()
+            fps = 1 / (endtime - starttime)
+            fps = str(round(fps, 2))
+            cv2.putText(im0, fps, (20, 80), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
             # Stream results
             im0 = annotator.result()
