@@ -192,6 +192,10 @@ def run(
                     # print('class index is',class_index.item())#打印属性，由于我们只有一个类，所以是0
                     # print('object_names is',object_name)#打印标签名字，
                     cv2.putText(im0, str(point), (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                    cv2.putText(im0, '+', (int((x1 + x2) / 2), int((y1 + y2) / 2)), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                                (0, 0, 255), 4)
+
+
 
             # 计算fps
             endtime = time.time()
@@ -244,10 +248,10 @@ def run(
 def parse_opt():
     parser = argparse.ArgumentParser()
     parser.add_argument('--weights', nargs='+', type=str, default=ROOT / 'E:/python code/FSO-UAV/yolov5-master/runs/train/yolov5n/weights/best.pt', help='model path or triton URL')
-    parser.add_argument('--source', type=str, default= 'E:/python code/FSO-UAV/yolov5-master/test/daybig/', help='file/dir/URL/glob/screen/0(webcam)')
+    parser.add_argument('--source', type=str, default= 'E:/python code/FSO-UAV/yolov5-master/test/daybig/daybig50-120M/120M', help='file/dir/URL/glob/screen/0(webcam)')
     parser.add_argument('--data', type=str, default='E:/python code/FSO-UAV/yolov5-master/data/drone_data.yaml', help='(optional) dataset.yaml path')
-    parser.add_argument('--imgsz', '--img', '--img-size', nargs='+', type=int, default=[800], help='inference size h,w')
-    parser.add_argument('--conf-thres', type=float, default=0.00, help='confidence threshold')
+    parser.add_argument('--imgsz', '--img', '--img-size', nargs='+', type=int, default=[864], help='inference size h,w')
+    parser.add_argument('--conf-thres', type=float, default=0.01, help='confidence threshold')
     parser.add_argument('--iou-thres', type=float, default=0.35, help='NMS IoU threshold')
     parser.add_argument('--max-det', type=int, default=1, help='maximum detections per image')
     parser.add_argument('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
