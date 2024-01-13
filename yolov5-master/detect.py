@@ -50,8 +50,8 @@ from utils.general import (LOGGER, Profile, check_file, check_img_size, check_im
                            increment_path, non_max_suppression, print_args, scale_boxes, strip_optimizer, xyxy2xywh)
 from utils.plots import Annotator, colors, save_one_box
 from utils.torch_utils import select_device, smart_inference_mode
-client = socket.socket()  # 声明socket类型，同时生成socket连接对象
-client.connect(('26.170.196.59', 1234))
+# client = socket.socket()  # 声明socket类型，同时生成socket连接对象
+# client.connect(('26.170.196.59', 1234))
 @smart_inference_mode()
 def run(
         weights=ROOT / 'yolov5s.pt',  # model path or triton URL
@@ -60,7 +60,7 @@ def run(
         imgsz=(640, 640),  # inference size (height, width)
         conf_thres=0.25,  # confidence threshold
         iou_thres=0.45,  # NMS IOU threshold
-        max_det=1000,  # maximum detections per image
+        max_det=1,  # maximum detections per image
         device='',  # cuda device, i.e. 0 or 0,1,2,3 or cpu
         view_img=False,  # show results
         save_txt=False,  # save results to *.txt
@@ -187,8 +187,8 @@ def run(
                     x = (x1 + x2) / 2
                     y = (y1 + y2) / 2
                     point = str(x) + " " + str(y)
-                    client.send((bytes(point, 'utf-8')))  # 变成二进制
-                    time.sleep(0.1)
+                    #client.send((bytes(point, 'utf-8')))  # 变成二进制
+                    #time.sleep(0.1)
                     # print('class index is',class_index.item())#打印属性，由于我们只有一个类，所以是0
                     # print('object_names is',object_name)#打印标签名字，
                     cv2.putText(im0, str(point), (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
@@ -243,13 +243,13 @@ def run(
 
 def parse_opt():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--weights', nargs='+', type=str, default=ROOT / 'E:/python code/FSO-UAV/yolov5-master/runs/train/exp7/weights/best.pt', help='model path or triton URL')
-    parser.add_argument('--source', type=str, default=ROOT / '0', help='file/dir/URL/glob/screen/0(webcam)')
-    parser.add_argument('--data', type=str, default=ROOT / 'E:/python code/FSO-UAV/yolov5-master/data/drone_data.yaml', help='(optional) dataset.yaml path')
-    parser.add_argument('--imgsz', '--img', '--img-size', nargs='+', type=int, default=[640], help='inference size h,w')
-    parser.add_argument('--conf-thres', type=float, default=0.65, help='confidence threshold')
-    parser.add_argument('--iou-thres', type=float, default=0.45, help='NMS IoU threshold')
-    parser.add_argument('--max-det', type=int, default=1000, help='maximum detections per image')
+    parser.add_argument('--weights', nargs='+', type=str, default=ROOT / 'E:/python code/FSO-UAV/yolov5-master/runs/train/yolov5n/weights/best.pt', help='model path or triton URL')
+    parser.add_argument('--source', type=str, default= 'E:/python code/FSO-UAV/yolov5-master/test/daybig/', help='file/dir/URL/glob/screen/0(webcam)')
+    parser.add_argument('--data', type=str, default='E:/python code/FSO-UAV/yolov5-master/data/drone_data.yaml', help='(optional) dataset.yaml path')
+    parser.add_argument('--imgsz', '--img', '--img-size', nargs='+', type=int, default=[800], help='inference size h,w')
+    parser.add_argument('--conf-thres', type=float, default=0.00, help='confidence threshold')
+    parser.add_argument('--iou-thres', type=float, default=0.35, help='NMS IoU threshold')
+    parser.add_argument('--max-det', type=int, default=1, help='maximum detections per image')
     parser.add_argument('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
     parser.add_argument('--view-img', action='store_true', help='show results')
     parser.add_argument('--save-txt', action='store_true', help='save results to *.txt')
