@@ -20,7 +20,7 @@ test: ./drone_all/images/test
 nc: 2
 names:
   0: drone
-  1: bird
+  1: light
 
 
 # Download script/URL (optional) ---------------------------------------------------------------------------------------

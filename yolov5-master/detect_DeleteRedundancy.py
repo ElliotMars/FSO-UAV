@@ -34,11 +34,7 @@ import platform
 import sys
 import socket
 import time
-import threading
 from pathlib import Path
-import serial
-from crcmod import mkCrcFun
-from binascii import unhexlify
 
 import torch
 
@@ -56,16 +52,7 @@ from utils.plots import Annotator, colors, save_one_box
 from utils.torch_utils import select_device, smart_inference_mode
 # client = socket.socket()  # 声明socket类型，同时生成socket连接对象
 # client.connect(('26.170.196.59', 1234))
-X0 = 640
-Y0 = 320
-KP = 0.01
-#KPy = 0.1
-KI = 0
-KD = 0.0005
-lasterrorx = 0
-lasterrory = 0
-integralx = 0
-integraly = 0
+
 @smart_inference_mode()
 def run(
         weights=ROOT / 'yolov5s.pt',  # model path or triton URL
@@ -96,21 +83,18 @@ def run(
         dnn=False,  # use OpenCV DNN for ONNX inference
         vid_stride=1,  # video frame-rate stride
 ):
-    xianfei = serial.Serial("COM8", 1000000, timeout=1)
-    time.sleep(2)
-
-    source = str(source)
-    save_img = not nosave and not source.endswith('.txt')  # save inference images
-    is_file = Path(source).suffix[1:] in (IMG_FORMATS + VID_FORMATS)
-    is_url = source.lower().startswith(('rtsp://', 'rtmp://', 'http://', 'https://'))
-    webcam = source.isnumeric() or source.endswith('.streams') or (is_url and not is_file)
-    screenshot = source.lower().startswith('screen')
-    if is_url and is_file:
-        source = check_file(source)  # download
+    # source = str(source)
+    # save_img = not nosave and not source.endswith('.txt')  # save inference images
+    # is_file = Path(source).suffix[1:] in (IMG_FORMATS + VID_FORMATS)
+    # is_url = source.lower().startswith(('rtsp://', 'rtmp://', 'http://', 'https://'))
+    # webcam = source.isnumeric() or source.endswith('.streams') or (is_url and not is_file)
+    # screenshot = source.lower().startswith('screen')
+    # if is_url and is_file:
+    # source = check_file(source)  # download
 
     # Directories
-    save_dir = increment_path(Path(project) / name, exist_ok=exist_ok)  # increment run
-    (save_dir / 'labels' if save_txt else save_dir).mkdir(parents=True, exist_ok=True)  # make dir
+    #save_dir = increment_path(Path(project) / name, exist_ok=exist_ok)  # increment run
+    #(save_dir / 'labels' if save_txt else save_dir).mkdir(parents=True, exist_ok=True)  # make dir
 
     # Load model
     device = select_device(device)
@@ -120,15 +104,15 @@ def run(
 
     # Dataloader
     bs = 1  # batch_size
-    if webcam:
-        view_img = check_imshow(warn=True)
-        dataset = LoadStreams(source, img_size=imgsz, stride=stride, auto=pt, vid_stride=vid_stride)
-        bs = len(dataset)
-    elif screenshot:
-        dataset = LoadScreenshots(source, img_size=imgsz, stride=stride, auto=pt)
-    else:
-        dataset = LoadImages(source, img_size=imgsz, stride=stride, auto=pt, vid_stride=vid_stride)
-    vid_path, vid_writer = [None] * bs, [None] * bs
+    #if webcam:
+    view_img = check_imshow(warn=True)
+    dataset = LoadStreams(source, img_size=imgsz, stride=stride, auto=pt, vid_stride=vid_stride)
+    bs = len(dataset)
+    #elif screenshot:
+        #dataset = LoadScreenshots(source, img_size=imgsz, stride=stride, auto=pt)
+    #else:
+        #dataset = LoadImages(source, img_size=imgsz, stride=stride, auto=pt, vid_stride=vid_stride)
+    #vid_path, vid_writer = [None] * bs, [None] * bs
 
     # Run inference
     model.warmup(imgsz=(1 if pt or model.triton else bs, 3, *imgsz))  # warmup
@@ -144,7 +128,7 @@ def run(
 
         # Inference
         with dt[1]:
-            visualize = increment_path(save_dir / Path(path).stem, mkdir=True) if visualize else False
+            #visualize = increment_path(save_dir / Path(path).stem, mkdir=True) if visualize else False
             pred = model(im, augment=augment, visualize=visualize)
 
         # NMS
@@ -157,15 +141,15 @@ def run(
         # Process predictions
         for i, det in enumerate(pred):  # per image
             seen += 1
-            if webcam:  # batch_size >= 1
-                p, im0, frame = path[i], im0s[i].copy(), dataset.count
-                s += f'{i}: '
-            else:
-                p, im0, frame = path, im0s.copy(), getattr(dataset, 'frame', 0)
+            #if webcam:  # batch_size >= 1
+            p, im0, frame = path[i], im0s[i].copy(), dataset.count
+            s += f'{i}: '
+            # else:
+            #     p, im0, frame = path, im0s.copy(), getattr(dataset, 'frame', 0)
 
             p = Path(p)  # to Path
-            save_path = str(save_dir / p.name)  # im.jpg
-            txt_path = str(save_dir / 'labels' / p.stem) + ('' if dataset.mode == 'image' else f'_{frame}')  # im.txt
+            #save_path = str(save_dir / p.name)  # im.jpg
+            #txt_path = str(save_dir / 'labels' / p.stem) + ('' if dataset.mode == 'image' else f'_{frame}')  # im.txt
             s += '%gx%g ' % im.shape[2:]  # print string
             gn = torch.tensor(im0.shape)[[1, 0, 1, 0]]  # normalization gain whwh
             imc = im0.copy() if save_crop else im0  # for save_crop
@@ -181,16 +165,16 @@ def run(
 
                 # Write results
                 for *xyxy, conf, cls in reversed(det):
-                    if save_txt:  # Write to file
-                        xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
-                        line = (cls, *xywh, conf) if save_conf else (cls, *xywh)  # label format
-                        with open(f'{txt_path}.txt', 'a') as f:
-                            f.write(('%g ' * len(line)).rstrip() % line + '\n')
-
-                    if save_img or save_crop or view_img:  # Add bbox to image
-                        c = int(cls)  # integer class
-                        label = None if hide_labels else (names[c] if hide_conf else f'{names[c]} {conf:.2f}')
-                        annotator.box_label(xyxy, label, color=colors(c, True))
+                    # if save_txt:  # Write to file
+                    #     xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
+                    #     line = (cls, *xywh, conf) if save_conf else (cls, *xywh)  # label format
+                    #     with open(f'{txt_path}.txt', 'a') as f:
+                    #         f.write(('%g ' * len(line)).rstrip() % line + '\n')
+                    #
+                    # if save_img or save_crop or view_img:  # Add bbox to image
+                    c = int(cls)  # integer class
+                    label = None if hide_labels else (names[c] if hide_conf else f'{names[c]} {conf:.2f}')
+                    annotator.box_label(xyxy, label, color=colors(c, True))
                     # if save_crop:
                     #     save_one_box(xyxy, imc, file=save_dir / 'crops' / names[c] / f'{p.stem}.jpg', BGR=True)
                     x1 = float(xyxy[0].item())
@@ -207,20 +191,17 @@ def run(
                     #time.sleep(0.1)
                     # print('class index is',class_index.item())#打印属性，由于我们只有一个类，所以是0
                     # print('object_names is',object_name)#打印标签名字，
-                    # cv2.putText(im0, str(point), (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-                    # cv2.putText(im0, '+', (int((x1 + x2) / 2), int((y1 + y2) / 2)), cv2.FONT_HERSHEY_SIMPLEX, 1,
-                    #             (0, 0, 255), 4)
-                    delta_controlx, delta_controly = PID(x, y)
-                    code_bytes = transform(delta_controlx, delta_controly)
-                    xianfei.write(code_bytes)
-                    xianfei.flush()
-
+                    cv2.putText(im0, str(point), (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                    cv2.putText(im0, '+', (int((x1 + x2) / 2), int((y1 + y2) / 2)), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                                 (0, 0, 255), 4)
+            else:
+                print("no detections")
             # 计算fps
-            # endtime = time.time()
-            # fps = 1 / (endtime - starttime)
-            # fps = str(round(fps, 2))
-            # cv2.putText(im0, fps, (20, 80), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-            # print(fps)
+            endtime = time.time()
+            fps = 1 / (endtime - starttime)
+            fps = str(round(fps, 2))
+            cv2.putText(im0, fps, (20, 80), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+            print(fps)
 
             #Stream results
             im0 = annotator.result()
@@ -232,7 +213,7 @@ def run(
                 cv2.imshow(str(p), im0)
                 cv2.waitKey(1)  # 1 millisecond
 
-            # # Save results (image with detections)
+            # Save results (image with detections)
             # if save_img:
             #     if dataset.mode == 'image':
             #         cv2.imwrite(save_path, im0)
@@ -252,7 +233,7 @@ def run(
             #         vid_writer[i].write(im0)
 
         # Print time (inference-only)
-        LOGGER.info(f"{s}{'' if len(det) else '(no detections), ' }{dt[1].dt * 1E3:.1f}ms")
+        #LOGGER.info(f"{s}{'' if len(det) else '(no detections), ' }{dt[1].dt * 1E3:.1f}ms")
 
     # # Print results
     # t = tuple(x.t / seen * 1E3 for x in dt)  # speeds per image
@@ -263,87 +244,18 @@ def run(
     # if update:
     #     strip_optimizer(weights[0])  # update model (to fix SourceChangeWarning)
 
-def PID(x, y):
-    global lasterrorx, lasterrory, integralx, integraly
-    errorx = x - X0
-    errory = Y0 - y
-    delta_controlx = KP * errorx + KI * integralx + KD * (errorx - lasterrorx)
-    delta_controly = KP * errory + KI * integraly + KD * (errory - lasterrory)
-    lasterrorx = errorx
-    lasterrory = errory
-    integralx += errorx
-    integraly += errory
-    return delta_controlx, delta_controly
-
-
-def transform(delta_controlx, delta_controly):
-    # 在这里将角度转换为16进制指令形式, x为偏航, y为俯仰
-    delta_nx = float_to_hex_complement(delta_controlx)
-    delta_ny = float_to_hex_complement(delta_controly)
-    code1 = f'A8 E5 48 00 01 00 00 {delta_ny} {delta_nx} 04 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00'
-    crc = crc16_xmodem(code1)
-
-    # 使用f-string来格式化字符串
-    code = f'A8 E5 48 00 01 00 00 {delta_ny} {delta_nx} 04 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 {crc}'
-    # code = f'A8 E5 48 00 01 00 00 64 00 00 00 04 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 \
-    #     00 00 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 \
-    #     00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 32 3E'
-
-    # 移除多余的空格
-    code = code.replace(' ', '')
-
-    # 转换为字节
-    #print(code)
-    code_bytes = bytes.fromhex(code)
-    return code_bytes
-
-
-def float_to_hex_complement(value):
-    # 1. 取两位小数并乘以100
-    scaled_value = round(value * 100, 2)
-
-    # 2. 转换为整数
-    int_value = int(scaled_value)
-
-    # 3. 获取补码（16位整数表示）
-    if int_value < 0:
-        complement = (1 << 16) + int_value
-    else:
-        complement = int_value
-
-    # 4. 转换为16进制表示，确保为4位
-    hex_value = format(complement & 0xFFFF, '04x')  # 取16位，并确保长度为4
-
-    # 5. 小端序（交换字节顺序）
-    little_endian_hex = hex_value[2:] + hex_value[:2]
-
-    # 6. 将字母大写
-    little_endian_hex = little_endian_hex.upper()
-
-    return little_endian_hex
-
-def crc16_xmodem(s):
-    crc16 = mkCrcFun(0x11021, rev=False, initCrc=0x0000, xorOut=0x0000)
-    return get_crc_value(s, crc16)
-
-# common func
-def get_crc_value(s, crc16):
-    data = s.replace(' ', '')
-    crc_out = crc16(unhexlify(data))
-    crc_data = f"{crc_out:04X}"  # 转换为大写的4位十六进制字符串，自动补零
-    return crc_data[:2] + ' ' + crc_data[2:]
 
 def parse_opt():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--weights', nargs='+', type=str, default='runs/train/yolov5n-allin_bird/weights/best.pt', help='model path or triton URL')
-    parser.add_argument('--source', type=str, default= 'rtsp://192.168.144.108:554', help='file/dir/URL/glob/screen/0(webcam)')
-    parser.add_argument('--data', type=str, default='data/drone_data3.yaml', help='(optional) dataset.yaml path')
+    parser.add_argument('--weights', nargs='+', type=str, default=ROOT / 'E:/python code/FSO-UAVtest/yolov5-master/runs/train/yolov5n-allin/weights/best.pt', help='model path or triton URL')
+    parser.add_argument('--source', type=str, default= '0', help='file/dir/URL/glob/screen/0(webcam)')
+    parser.add_argument('--data', type=str, default='E:/python code/FSO-UAV/yolov5-master/data/drone_data.yaml', help='(optional) dataset.yaml path')
     parser.add_argument('--imgsz', '--img', '--img-size', nargs='+', type=int, default=[480], help='inference size h,w')
-    parser.add_argument('--conf-thres', type=float, default=0.6, help='confidence threshold')
+    parser.add_argument('--conf-thres', type=float, default=0.4, help='confidence threshold')
     parser.add_argument('--iou-thres', type=float, default=0.35, help='NMS IoU threshold')
     parser.add_argument('--max-det', type=int, default=1, help='maximum detections per image')
     parser.add_argument('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
-    parser.add_argument('--view-img', default=True, action='store_true', help='show results')
+    parser.add_argument('--view-img', action='store_true', help='show results')
     parser.add_argument('--save-txt', action='store_true', help='save results to *.txt')
     parser.add_argument('--save-conf', action='store_true', help='save confidences in --save-txt labels')
     parser.add_argument('--save-crop', action='store_true', help='save cropped prediction boxes')
