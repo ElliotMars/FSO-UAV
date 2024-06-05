@@ -39,8 +39,9 @@ from pathlib import Path
 import serial
 from crcmod import mkCrcFun
 from binascii import unhexlify
-
+import numpy as np
 import torch
+from Plot_error import ErrorPlot
 
 FILE = Path(__file__).resolve() #该detect.py文件的绝对路径
 ROOT = FILE.parents[0]  # YOLOv5 root directory
@@ -58,6 +59,7 @@ from utils.torch_utils import select_device, smart_inference_mode
 # client.connect(('26.170.196.59', 1234))
 X0 = 640
 Y0 = 320
+GATE = 10
 KP = 0.01
 #KPy = 0.1
 KI = 0
@@ -66,6 +68,9 @@ lasterrorx = 0
 lasterrory = 0
 integralx = 0
 integraly = 0
+lastd = 0
+integrald = 0
+PID_tuner = ErrorPlot()
 @smart_inference_mode()
 def run(
         weights=ROOT / 'yolov5s.pt',  # model path or triton URL
@@ -98,6 +103,7 @@ def run(
 ):
     xianfei = serial.Serial("COM8", 1000000, timeout=1)
     time.sleep(2)
+    car_init(xianfei)
 
     source = str(source)
     save_img = not nosave and not source.endswith('.txt')  # save inference images
@@ -265,8 +271,22 @@ def run(
 
 def PID(x, y):
     global lasterrorx, lasterrory, integralx, integraly
+    #global lastd, integrald, GATE, PID_tuner
+    #errorx = ((x - X0) if (x - X0)!=0 else 0.001)
     errorx = x - X0
     errory = Y0 - y
+    # angle = np.arctan(errory / errorx)
+    # d = np.sqrt(errorx**2 + errory**2)
+    # PID_tuner.add_error(d)
+    # PID_tuner.plotout()
+    # if (d <= GATE):
+    #     movement = 0
+    # elif (d > GATE):
+    #     movement = KP * d + KI * integrald + KD * (d - lastd)
+    # lastd = d
+    # integrald += d
+    # delta_controlx = movement * np.cos(angle)
+    # delta_controly = movement * np.sin(angle)
     delta_controlx = KP * errorx + KI * integralx + KD * (errorx - lasterrorx)
     delta_controly = KP * errory + KI * integraly + KD * (errory - lasterrory)
     lasterrorx = errorx
@@ -288,6 +308,8 @@ def transform(delta_controlx, delta_controly):
     # code = f'A8 E5 48 00 01 00 00 64 00 00 00 04 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 \
     #     00 00 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 \
     #     00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 32 3E'
+
+    print(code)
 
     # 移除多余的空格
     code = code.replace(' ', '')
@@ -333,13 +355,28 @@ def get_crc_value(s, crc16):
     crc_data = f"{crc_out:04X}"  # 转换为大写的4位十六进制字符串，自动补零
     return crc_data[:2] + ' ' + crc_data[2:]
 
+def car_init(xianfei):
+    initial_code1_bytes = transform(0, -10)
+    for i in range(10):
+        xianfei.write(initial_code1_bytes)
+        xianfei.flush()
+        time.sleep(0.1)
+
+    initial_code2 = f'A8 E5 49 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 \
+                            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 \
+                            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 73 00 92 99'
+    initial_code2 = initial_code2.replace(' ', '')
+    initial_code2_bytes = bytes.fromhex(initial_code2)
+    xianfei.write(initial_code2_bytes)
+    xianfei.flush()
+
 def parse_opt():
     parser = argparse.ArgumentParser()
     parser.add_argument('--weights', nargs='+', type=str, default='runs/train/yolov5n-allin_bird/weights/best.pt', help='model path or triton URL')
     parser.add_argument('--source', type=str, default= 'rtsp://192.168.144.108:554', help='file/dir/URL/glob/screen/0(webcam)')
     parser.add_argument('--data', type=str, default='data/drone_data3.yaml', help='(optional) dataset.yaml path')
     parser.add_argument('--imgsz', '--img', '--img-size', nargs='+', type=int, default=[480], help='inference size h,w')
-    parser.add_argument('--conf-thres', type=float, default=0.6, help='confidence threshold')
+    parser.add_argument('--conf-thres', type=float, default=0.35, help='confidence threshold')
     parser.add_argument('--iou-thres', type=float, default=0.35, help='NMS IoU threshold')
     parser.add_argument('--max-det', type=int, default=1, help='maximum detections per image')
     parser.add_argument('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
